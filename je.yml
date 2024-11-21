@@ -1,47 +1,85 @@
 ---
-- name: Install SonarQube on Ubuntu
+- name: Install and configure SonarQube on Ubuntu VM
   hosts: localhost
-  become: yes
-  connection: local
+  become: true
+  vars:
+    sonarqube_version: "9.9.0.65466"
+    sonarqube_home: "/opt/sonarqube"
+    sonarqube_user: "sonar"
+    sonarqube_group: "sonar"
+    sonar_port: 9000
 
   tasks:
-    - name: Update apt cache
+    - name: Update apt repository cache
       apt:
         update_cache: yes
 
-    - name: Install Java
+    - name: Install required dependencies
       apt:
-        name: default-jdk
-        state: present
-
-    - name: Install dependencies
-      apt:
-        name: 
-          - gnupg
+        name:
+          - openjdk-11-jdk
           - wget
+          - unzip
         state: present
 
-    - name: Add SonarQube GPG key
-      shell: |
-        wget -qO - https://download.sonarsource.com/sonarqube/release/sonarqube-8.9.0.43852.zip
-
-    - name: Add SonarQube repository
-      apt_repository:
-        repo: "deb https://apt.sonarqube.org/latest stable main"
-        state: present
-        filename: "/etc/apt/sources.list.d/sonarqube.list"
-    
-    - name: Update apt cache after adding SonarQube repository
-      apt:
-        update_cache: yes
-
-    - name: Install SonarQube
-      apt:
-        name: sonarqube
+    - name: Create SonarQube user and group
+      user:
+        name: "{{ sonarqube_user }}"
+        group: "{{ sonarqube_group }}"
+        create_home: no
+        shell: /bin/bash
         state: present
 
-    - name: Start and enable SonarQube service
+    - name: Download SonarQube
+      get_url:
+        url: "https://binaries.sonarsource.com/CommercialEdition/sonarqube-{{ sonarqube_version }}.zip"
+        dest: "/tmp/sonarqube-{{ sonarqube_version }}.zip"
+        mode: '0644'
+
+    - name: Unzip SonarQube
+      unarchive:
+        src: "/tmp/sonarqube-{{ sonarqube_version }}.zip"
+        dest: "{{ sonarqube_home }}"
+        remote_src: yes
+        extra_opts:
+          - 'strip_components=1'
+
+    - name: Set the correct ownership for SonarQube
+      file:
+        path: "{{ sonarqube_home }}"
+        owner: "{{ sonarqube_user }}"
+        group: "{{ sonarqube_group }}"
+        recurse: yes
+
+    - name: Configure SonarQube for autostart
+      copy:
+        dest: "/etc/systemd/system/sonarqube.service"
+        content: |
+          [Unit]
+          Description=SonarQube service
+          After=network.target
+
+          [Service]
+          Type=simple
+          User={{ sonarqube_user }}
+          Group={{ sonarqube_group }}
+          ExecStart={{ sonarqube_home }}/bin/linux-x86-64/sonar.sh start
+          ExecStop={{ sonarqube_home }}/bin/linux-x86-64/sonar.sh stop
+          LimitNOFILE=65536
+          TimeoutStartSec=300
+
+          [Install]
+          WantedBy=multi-user.target
+      notify:
+        - Reload systemd
+
+    - name: Enable and start SonarQube service
       systemd:
         name: sonarqube
-        state: started
         enabled: yes
+        state: started
+
+  handlers:
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
