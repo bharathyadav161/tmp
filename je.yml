@@ -14,34 +14,25 @@
         name: default-jdk
         state: present
 
-    - name: Install dependencies
-      apt:
-        name: 
-          - gnupg
-          - wget
-        state: present
-
-    - name: Add SonarQube GPG key
-      apt_key:
-        url: "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xB98D606E3F0F2A37"
-        state: present
+    - name: Download SonarQube GPG key
+      get_url:
+        url: "https://bintray.com/jfrog/artifactory-rpms/pubkey"
+        dest: "/etc/apt/trusted.gpg.d/sonarqube.gpg"
+        mode: '0644'
+        force: yes
 
     - name: Add SonarQube repository
       apt_repository:
         repo: "deb http://downloads.sourceforge.net/project/sonar-pkg/deb binary/"
         state: present
 
-    - name: Update apt cache after adding SonarQube repository
-      apt:
-        update_cache: yes
-
     - name: Install SonarQube
       apt:
         name: sonarqube
         state: present
 
-    - name: Start and enable SonarQube service
-      systemd:
+    - name: Start SonarQube service
+      service:
         name: sonarqube
         state: started
         enabled: yes
