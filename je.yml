@@ -22,7 +22,12 @@
           - unzip
         state: present
 
-    - name: Create SonarQube user and group
+    - name: Create SonarQube group
+      group:
+        name: "{{ sonarqube_group }}"
+        state: present
+
+    - name: Create SonarQube user
       user:
         name: "{{ sonarqube_user }}"
         group: "{{ sonarqube_group }}"
