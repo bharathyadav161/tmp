@@ -1,7 +1,8 @@
 ---
-- name: Install Jenkins on Ubuntu
-  hosts: jenkins_server
+- name: Install SonarQube on Ubuntu
+  hosts: localhost
   become: yes
+  connection: local
 
   tasks:
     - name: Update apt cache
@@ -13,20 +14,27 @@
         name: default-jdk
         state: present
 
-    - name: Add Jenkins repository key
+    - name: Add SonarQube repository key
       apt_key:
-        url: https://pkg.jenkins.io/debian/jenkins.io.key
+        url: https://bintray.com/jfrog/artifactory-rpms/pubkey
         state: present
 
-    - name: Add Jenkins repository
+    - name: Add SonarQube repository
       apt_repository:
-        repo: "deb https://pkg.jenkins.io/debian binary/"
+        repo: 'deb https://bintray.com/jfrog/artifactory-rpms/rpm /'
         state: present
 
-    - name: Install Jenkins
+    - name: Install SonarQube
       apt:
-        name: jenkins
+        name: sonarqube
         state: present
+
+    - name: Start SonarQube service
+      service:
+        name: sonarqube
+        state: started
+        enabled: yes
+
 
     - name: Start Jenkins service
       service:
