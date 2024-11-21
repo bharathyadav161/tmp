@@ -1,5 +1,5 @@
 ---
-- name: Install Jenkins on Ubuntu
+- name: Install SonarQube on Ubuntu
   hosts: localhost
   become: yes
   connection: local
@@ -14,24 +14,34 @@
         name: default-jdk
         state: present
 
-    - name: Add Jenkins repository key (alternative method)
-      shell: |
-        curl -fsSL https://pkg.jenkins.io/debian/jenkins.io.key | sudo apt-key add -
-      args:
-        warn: false
-
-    - name: Add Jenkins repository
-      apt_repository:
-        repo: "deb https://pkg.jenkins.io/debian binary/"
-        state: present
-
-    - name: Install Jenkins
+    - name: Install dependencies
       apt:
-        name: jenkins
+        name: 
+          - gnupg
+          - wget
         state: present
 
-    - name: Start Jenkins service
-      service:
-        name: jenkins
+    - name: Add SonarQube GPG key
+      apt_key:
+        url: "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xB98D606E3F0F2A37"
+        state: present
+
+    - name: Add SonarQube repository
+      apt_repository:
+        repo: "deb http://downloads.sourceforge.net/project/sonar-pkg/deb binary/"
+        state: present
+
+    - name: Update apt cache after adding SonarQube repository
+      apt:
+        update_cache: yes
+
+    - name: Install SonarQube
+      apt:
+        name: sonarqube
+        state: present
+
+    - name: Start and enable SonarQube service
+      systemd:
+        name: sonarqube
         state: started
         enabled: yes
