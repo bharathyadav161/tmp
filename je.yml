@@ -1,90 +1,18 @@
 ---
-- name: Install and configure SonarQube on Ubuntu VM
-  hosts: localhost
-  become: true
-  vars:
-    sonarqube_version: "9.9.0.65466"
-    sonarqube_home: "/opt/sonarqube"
-    sonarqube_user: "sonar"
-    sonarqube_group: "sonar"
-    sonar_port: 9000
-
+- name: Download and run Jenkins agent
+  hosts: all
   tasks:
-    - name: Update apt repository cache
-      apt:
-        update_cache: yes
-
-    - name: Install required dependencies
-      apt:
-        name:
-          - openjdk-11-jdk
-          - wget
-          - unzip
-        state: present
-
-    - name: Create SonarQube group
-      group:
-        name: "{{ sonarqube_group }}"
-        state: present
-
-    - name: Create SonarQube user
-      user:
-        name: "{{ sonarqube_user }}"
-        group: "{{ sonarqube_group }}"
-        create_home: no
-        shell: /bin/bash
-        state: present
-
-    - name: Download SonarQube
-      get_url:
-        url: "https://binaries.sonarsource.com/CommercialEdition/sonarqube-{{ sonarqube_version }}.zip"
-        dest: "/tmp/sonarqube-{{ sonarqube_version }}.zip"
-        mode: '0644'
-
-    - name: Unzip SonarQube
-      unarchive:
-        src: "/tmp/sonarqube-{{ sonarqube_version }}.zip"
-        dest: "{{ sonarqube_home }}"
-        remote_src: yes
-        extra_opts:
-          - 'strip_components=1'
-
-    - name: Set the correct ownership for SonarQube
-      file:
-        path: "{{ sonarqube_home }}"
-        owner: "{{ sonarqube_user }}"
-        group: "{{ sonarqube_group }}"
-        recurse: yes
-
-    - name: Configure SonarQube for autostart
-      copy:
-        dest: "/etc/systemd/system/sonarqube.service"
-        content: |
-          [Unit]
-          Description=SonarQube service
-          After=network.target
-
-          [Service]
-          Type=simple
-          User={{ sonarqube_user }}
-          Group={{ sonarqube_group }}
-          ExecStart={{ sonarqube_home }}/bin/linux-x86-64/sonar.sh start
-          ExecStop={{ sonarqube_home }}/bin/linux-x86-64/sonar.sh stop
-          LimitNOFILE=65536
-          TimeoutStartSec=300
-
-          [Install]
-          WantedBy=multi-user.target
-      notify:
-        - Reload systemd
-
-    - name: Enable and start SonarQube service
-      systemd:
-        name: sonarqube
-        enabled: yes
-        state: started
-
-  handlers:
-    - name: Reload systemd
-      systemd:
-        daemon_reload: yes
+    - name: Download agent.jar
+      shell: curl -sO http://localhost:8080/jnlpJars/agent.jar
+      args:
+        chdir: /path/to
+ 
+    - name: Run Jenkins agent
+      shell: >
+        java -jar /path/to/agent.jar
+        -url http://localhost:8080/
+        -secret 5d61bc9cf192e894a0f6327016bdb61b43951b4182c7b9c28d1bd808bf93782f
+        -name slave1
+        -workDir /slave1
+      args:
+        chdir: /slave1
