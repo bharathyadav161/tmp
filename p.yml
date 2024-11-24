@@ -10,7 +10,7 @@
       ignore_errors: yes
 
     - name: Install Apache
-      yum:
+      apt:
         name: httpd
         state: present
       when: apache_installed.rc != 0
